@@ -26,6 +26,8 @@ export default function Home() {
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [pdfUrl, setPdfUrl] = useState<string | null>(null);
+
   const [results, setResults] = useState<{
     risk: any;
     fraud: any;
@@ -105,6 +107,33 @@ export default function Home() {
     if (score < 0.3) return "bg-green-100 text-green-800";
     if (score < 0.7) return "bg-yellow-100 text-yellow-800";
     return "bg-red-100 text-red-800";
+  };
+  const generatePdf = async () => {
+    if (!results) {
+      setError("No analysis results available for PDF generation.");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${API_URL}/generate-pdf`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(results),
+      });
+
+      if (!response.ok) throw new Error("Failed to generate PDF");
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      setPdfUrl(url);
+    } catch (err: any) {
+      setError(`Error generating PDF: ${err.message}`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -316,6 +345,23 @@ export default function Home() {
                   <p>No compliance issues found.</p>
                 )}
               </div>
+              <Button
+                className="w-full mt-4"
+                onClick={generatePdf}
+                disabled={!results}
+              >
+                Generate PDF Report
+              </Button>
+
+              {pdfUrl && (
+                <a
+                  href={pdfUrl}
+                  download="KYC_Report.pdf"
+                  className="mt-4 text-blue-500 underline"
+                >
+                  Download KYC Report
+                </a>
+              )}
             </div>
           </CardContent>
         </Card>
